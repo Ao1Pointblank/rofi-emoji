@@ -1,6 +1,8 @@
 # rofi-emoji
 Download latest Unicode emoji, Apply nicknames, Copy-Paste/Autotype them from Rofi! 
 
+![Screenshot from 2024-02-19 14-25-39](https://github.com/Ao1Pointblank/rofi-emoji/assets/88149675/55a8cde8-2168-4e1f-9e77-17bcc46b0ba8)
+
 # Dependencies
 - rofi
 - xsel
@@ -27,3 +29,7 @@ Download latest Unicode emoji, Apply nicknames, Copy-Paste/Autotype them from Ro
 -t, --test-nicknames		use after the -n option to print the emoji names that would be altered by -n  
 -h, --help			show this help list  
 ```
+
+# To-Do
+- simplify CLI options (for example, --test-nicknames only works if used in conjunction with --nicknames, -F only works with -D. this is probably unnecesary)
+- warn users that running --nicknames more than once without redownloading the emoji batch will result in a slightly broken emoji cache file
