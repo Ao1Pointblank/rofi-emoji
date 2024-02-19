@@ -17,6 +17,7 @@ Download latest Unicode emoji, Apply nicknames, Copy-Paste/Autotype them from Ro
 - you can add nicknames to emoji to assist searching for ones with obscure titles.  
   these nicknames are saved within the script file itself, not the cache file (so that they are not replaced when you redownload the list from unicode.org)
   I supplied some nicknames which discord users will be familiar with already.
+  these nicknames are *in addition* to the default ones from unicode.org. they will not replace them.
 
 # CLI options
 ```
