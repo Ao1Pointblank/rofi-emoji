@@ -10,26 +10,34 @@ Download latest Unicode emoji, Apply nicknames, Copy-Paste/Autotype them from Ro
 - curl
 
 # Installation
-- save the script to ``$PATH`` (I suggest ~/.local/bin)  
-- edit the location of the emoji cache file (``$EMOJI_FILE`` defaults to ~/Documents/unicode-emoji.txt)  
-- run the command to download latest emoji list from Unicode.org ``rofi-emoji.sh --download``
-- set a keybind with your DE to run the script without any CLI args
+- Download: ``git clone git clone https://github.com/Ao1Pointblank/rofi-emoji``
+- Move to downloaded folder: ``cd rofi-emoji``
+- Give execute permission to script: ``chmod +x rofi-emoji.sh``
+- Save the script to ``$PATH`` (I suggest ~/.local/bin): ``cp rofi-emoji.sh ~/.local/bin/rofi-emoji.sh``
+- Edit the location of the emoji cache file if you want (defaults to ~/.config/rofi-emoji/unicode-emoji.txt): ``rofi-emoji.sh -e <emoji_file>``  
+- Download the latest emoji list from Unicode.org: ``rofi-emoji.sh --download``
+- Set a keybind with your DE to run the script without any CLI args
+![Screenshot from 2024-02-20 16-34-12](https://github.com/Ao1Pointblank/rofi-emoji/assets/88149675/ec03a352-9857-4de7-8857-e3feab629b98)
 
 # Other things to consider
 - you can add nicknames to emoji to assist searching for ones with obscure titles.  
-  these nicknames are saved within the script file itself, not the cache file (so that they are not replaced when you redownload the list from unicode.org)
+  these nicknames are saved within the script file itself, as well as the cache file (so that they are not lost when you redownload the list from unicode.org)
   I supplied some nicknames which discord users will be familiar with already.
   these nicknames are *in addition* to the default ones from unicode.org. they will not replace them.
 
 # CLI options
 ```
--D, --download			downloads a list of most recent emoji straight from unicode.org  
--F, --force-download		use after the -D option to download without saving previous $EMOJI_FILE to a .BAK backup  
--n, --nicknames			append a list of custom emoji nicknames to the $EMOJI_FILE; nicknames are stored in the script itself  
--t, --test-nicknames		use after the -n option to print the emoji names that would be altered by -n  
--h, --help			show this help list  
-```
+Usage: ./rofi-emoji.sh [-e|--emoji-file] [-d|--download] [-n|--nicknames] [-h|--help]
 
-# To-Do
-- simplify CLI options (for example, --test-nicknames only works if used in conjunction with --nicknames, -F only works with -D. this is probably unnecesary)
-- warn users that running --nicknames more than once without redownloading the emoji batch will result in a slightly broken emoji cache file
+Options:
+  -e, --emoji-file <emoji_file>  Set a new default path for the emoji list to be downloaded to
+                                 Leave blank to reset to /home/pointblank/.config/rofi-emoji/unicode-emoji.txt
+
+  -d, --download <emoji_file>    Downloads a list of most recent emoji from unicode.org
+                                 Defaults to /home/pointblank/.config/rofi-emoji/unicode-emoji.txt unless previously altered by -e
+
+  -n, --nicknames                Shows the list of nicknames saved in the script file which are appended to <emoji_file>
+
+  -h, --help                     Show this help message
+                                 If a custom <emoji_file> is set, --help will display it
+```
