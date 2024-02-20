@@ -10,28 +10,43 @@
 #     * Confirming an item will automatically type it.
 #     * Ctrl+C will copy it to your clipboard WITHOUT pasting it.
 
-#where to save the emojis file
-EMOJI_FILE="$HOME/Documents/unicode-emoji.txt"
+#where to save the emojis file by default
+DEFAULT_EMOJI_FILE="$HOME/.config/rofi-emoji/unicode-emoji.txt"
+
+#this value is altered by the --emoji-file option and will be used as the new default if not blank
+CUSTOM_EMOJI_FILE=""
+
+if [[ "$CUSTOM_EMOJI_FILE" == "" ]]; then
+	EMOJI_FILE="$DEFAULT_EMOJI_FILE"
+else
+	EMOJI_FILE="$CUSTOM_EMOJI_FILE"
+fi
+
+#function to set custom emoji file path in (saved in script file itself)
+set_emoji_file() {
+    local value="$1"
+    if [[ "$value" != "$CUSTOM_EMOJI_FILE" ]]; then
+	    sed -i "s|^CUSTOM_EMOJI_FILE=\".*\"$|CUSTOM_EMOJI_FILE=\"$value\"|" "$0"
+	else
+		echo "No change to custom emoji file"
+	fi
+}
 
 function download(){
+	#check if $EMOJI_FILE already exists, or make a new one
 	if [[ -e "$EMOJI_FILE" ]] ; then
-		mv -i "$EMOJI_FILE" "$EMOJI_FILE"_"$(date +%s)".BAK
+		backup_file="$EMOJI_FILE"_"$(date +%s)".BAK
+		echo "♻️  Backing up current emoji file to $backup_file"
+		mv "$EMOJI_FILE" "$backup_file"
 	else
+		echo "🆕 creating new emoji file at $EMOJI_FILE"
+		mkdir -p $(dirname "$EMOJI_FILE") || { echo "Error: Failed to create directory"; exit 1; }
 		touch "$EMOJI_FILE"
 	fi
 
+
 	source_url="https://unicode.org/Public/emoji/latest/emoji-test.txt"
-	html_content=$(curl -s "$source_url")
-
-	#extract lines containing qualified emojis
-	echo "$html_content" | grep '; fully-qualified' | awk -F'# ' '{print $2}' > "$EMOJI_FILE"
-
-	#remove unicode version number from all lines (matches "EX.YY " and "EXX.Y ")
-	sed -E -i 's/E[0-9]+(\.[0-9]+) //g' "$EMOJI_FILE"
-}
-
-function force_download(){
-	source_url="https://unicode.org/Public/emoji/latest/emoji-test.txt"
+	echo "🔻 downloading and extracting emoji from $source_url"
 	html_content=$(curl -s "$source_url")
 
 	#extract lines containing qualified emojis
@@ -42,10 +57,12 @@ function force_download(){
 }
 
 function display() {
+	#show the rofi gui
+	echo "currently using $EMOJI_FILE as source"
+	echo "run $0 -d to download new list of emoji, -h to show help"
     emoji=$(cat "$EMOJI_FILE" | grep -v '#' | grep -v '^[[:space:]]*$')
     line=$(echo "$emoji" | rofi -dmenu -i -p "Emoji" -kb-custom-1 Ctrl+c $@)
     exit_code=$?
-
     line=($line)
 
 	#autotyping
@@ -118,55 +135,118 @@ declare -A NICKNAME_MAP=(
   ["🇺🇸"]="usa | america"
 )
 
-function nicknames() {
-  for emoji in "${!NICKNAME_MAP[@]}"; do
-    nickname="${NICKNAME_MAP[$emoji]}"
+function append_nicknames() {
+	echo "🤓 appending emoji nicknames (--nicknames to view)"
+	for emoji in "${!NICKNAME_MAP[@]}"; do
+		nickname="${NICKNAME_MAP[$emoji]}"
 
-    sed -i "s/^$emoji /$emoji $nickname | /" "$EMOJI_FILE"
-  done
+		sed -i "s/^$emoji /$emoji $nickname | /" "$EMOJI_FILE"
+	done
+	echo "💾 file saved at $EMOJI_FILE"
 }
 
-function test_nicknames() {
-  for emoji in "${!NICKNAME_MAP[@]}"; do
-    nickname="${NICKNAME_MAP[$emoji]}"
-
-    #debugging line: will match all emoji and simulate appending nicknames without saving to file
-    sed -n "s/^$emoji /$emoji $nickname | /p" "$EMOJI_FILE"
-  done
+prompt_confirmation() {
+    local prompt_message="$1"
+    read -p "$prompt_message (y/n): " response
+    if [[ "$response" == "y" || "$response" == "Y" ]]; then
+        return 0 # Yes
+    elif [[ "$response" == "n" || "$response" == "N" ]]; then
+        return 1 # No
+    else
+        echo "Invalid response. Please enter 'y' for yes or 'n' for no."
+        prompt_confirmation "$prompt_message"
+    fi
 }
 
-#primitive argparsing
-if [[ "$1" =~ -D|--download ]]; then
-    if [[ "$2" =~ -F|--force-download ]]; then
-        force_download
-    else
-        download
-    fi
-    exit 0
-elif [[ "$1" =~ -n|--nicknames ]]; then
-    if [[ "$2" =~ -t|--test-nicknames ]]; then
-        test_nicknames
-    else
-        nicknames
-    fi
-    exit 0
-elif [[ "$1" =~ -h|--help ]]; then
-    echo "Usage: $0 [-D|--download -F|--force-download] [-n|--nicknames -t|--test-nicknames] [-h|--help]"
-	echo
-	echo "	-D, --download			downloads a list of most recent emoji straight from unicode.org"
-    echo "	-F, --force-download		use after the -D option to download without saving previous $EMOJI_FILE to a .BAK backup"
-    echo
-    echo "	-n, --nicknames			append a list of custom emoji nicknames to the $EMOJI_FILE; nicknames are stored in the script itself"
-    echo "	-t, --test-nicknames		use after the -n option to print the emoji names that would be altered by -n"
-    echo
-    echo "	-h, --help			show this help list"
-    exit 0
-fi
+#iterate through the command-line arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -e|--emoji-file)
+        	if [[ -n "$2" ]]; then
+        		if [[ ! "$2" =~ ^- ]]; then
+	                set_emoji_file "$2"
+	                shift
+    			else
+    			    echo "Error: No path provided for -e|--emoji-file" >&2
+            	fi
+            else
+            	echo "Reset default emoji file to $DEFAULT_EMOJI_FILE"
+            	set_emoji_file ""
+            	shift
+    		fi
+    		exit 0
+            ;;
+        -d|--download)
+            if [[ -n "$2" ]]; then
+                if [[ -n "$2" && ! "$2" =~ ^- ]]; then
+                    EMOJI_FILE="$2"
+                    download
+                    append_nicknames
 
-#download all emoji if they don't exist yet
-if [ ! -f "$EMOJI_FILE" ]; then
-    download
-fi
-
-#display rofi menu if all potential args exit 0
+                    #automatically ask if you want to set a new custom emoji files based on download location
+                    echo "⚠️ You have downloaded the emoji list to a non-default location."
+                    echo "⚠️ You have the option to set this location as the new default for all aspects of the script."
+                    if prompt_confirmation "Do you want to set the default emoji file to '$EMOJI_FILE'?"; then
+    					set_emoji_file "$EMOJI_FILE"
+    				echo "Emoji file set successfully."
+						else
+    				echo "Operation canceled."
+					fi
+                    shift
+                else
+                    echo "Error: Invalid file path provided after '-d|--download'" >&2
+                    exit 1
+                fi
+            else
+                download
+                append_nicknames
+                shift
+            fi
+            exit 0
+            ;;
+        -n|--nicknames)
+			if [[ -n "$2" ]]; then
+                if [[ -n "$2" && ! "$2" =~ ^- ]]; then
+	        		EMOJI_FILE="$2"
+	        		echo "Showing nicknames applied to $EMOJI_FILE:"
+            		echo
+	        		grep "|" "$EMOJI_FILE"
+	        	else
+                    echo "Error: Invalid file path provided after '-d|--download'" >&2
+                    exit 1
+                fi
+            else
+            	echo "Showing nicknames applied to $EMOJI_FILE:"
+            	echo
+            	grep "|" "$EMOJI_FILE"
+            fi
+            exit 0
+            ;;
+        -h|--help)
+        	if [[ "$CUSTOM_EMOJI_FILE" != "" ]]; then
+        		echo "⚠️ Custom emoji file location is currently: $CUSTOM_EMOJI_FILE"
+        	fi
+            echo "Usage: $0 [-e|--emoji-file] [-d|--download] [-n|--nicknames] [-h|--help]"
+            echo
+            echo "Options:"
+            echo "  -e, --emoji-file <emoji_file>  Set a new default path for the emoji list to be downloaded to"
+            echo "                                 Leave blank to reset to $DEFAULT_EMOJI_FILE"
+            echo
+            echo "  -d, --download <emoji_file>    Downloads a list of most recent emoji from unicode.org"
+            echo "                                 Defaults to $DEFAULT_EMOJI_FILE unless previously altered by -e"
+            echo
+            echo "  -n, --nicknames                Shows the list of nicknames saved in the script file which are appended to <emoji_file>"
+            echo
+            echo "  -h, --help                     Show this help message"
+            echo "                                 If a custom <emoji_file> is set, --help will display it"
+            echo
+            exit 0
+            ;;
+        -*)
+            #handle other arguments if needed
+            echo "Invalid command line option. try $0 --help"
+            exit 1
+            ;;
+    esac
+done
 display
