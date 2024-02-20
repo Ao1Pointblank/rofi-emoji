@@ -41,3 +41,6 @@ Options:
   -h, --help                     Show this help message
                                  If a custom <emoji_file> is set, --help will display it
 ```
+
+# To-do
+command line option to add new nicknames to the script without needing to manually edit the file
